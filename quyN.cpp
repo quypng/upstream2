@@ -72,6 +72,7 @@ void render_main_menu(Game *game)
 	glClear ( GL_COLOR_BUFFER_BIT );
 	game->introbg->render();
 	game->frog->render();
+	game->frog2->render();
 	render_main_menu_buttons(game);
 	if (game->highscoreboard)
 		render_highscore(game);

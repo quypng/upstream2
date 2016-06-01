@@ -101,6 +101,7 @@ struct Game {
 	HUD *hud;
 	Meter *meter;
 	Frog *frog;
+	Frog *frog2;
 	Gator *gator;
 	Fly *fly;
 	Monster *monster;

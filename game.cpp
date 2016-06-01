@@ -34,6 +34,7 @@ void init_game ( Game *game )
 	game->hud = new HUD;
 	game->meter = new Meter;
 	game->frog = new Frog;
+	game->frog2 = new Frog;
 	game->gator = new Gator;
 	game->monster = new Monster;
 	game->fly = new Fly;
@@ -233,8 +234,38 @@ void demo ( Game *game )
 	}
 	game->c.center[0]=game->frog->getXpos();
 	game->c.center[1]=game->frog->getYpos();
+	
+	int r= 40-rand()%20;
+	if (rand()%100+1==1){
+	game->frog2->move(game->frog2->getXpos()+r,
+				game->frog2->getYpos()+r,
+				game->frog->getXvel(),
+				game->frog->getYvel()+rand()%2 );
+			}else
+			game->frog2->move(game->frog2->getXpos(),
+				game->frog2->getYpos(),
+				game->frog2->getXvel(),
+				game->frog2->getYvel()-2+rand()%4 );
+				
+	if ( game->frog2->getXpos() >= game->windowWidth)		
+				game->frog2->move(game->frog2->getXpos(),
+				game->frog2->getYpos(),
+				game->frog2->getXvel()-2,0);
+				
+	if ( game->frog2->getXpos() <= 0)		
+				game->frog2->move(game->frog2->getXpos(),
+				game->frog2->getYpos(),
+				game->frog2->getXvel()+2,
+				game->frog2->getYvel());		
 	if ( !game->main_menu ) {
 		if ( game->frog->getMeter() )
 			game->frog->meterOff();
 	}
+	if ( !game->main_menu ) {
+		if ( game->frog2->getMeter() )
+			game->frog2->meterOff();
+	}
+	
+				
+				//std::cout<<game->frog2->getXpos()<<","<<game->frog2->getXvel()<<std::endl;
 }
