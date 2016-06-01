@@ -33,7 +33,8 @@ int main ( void )
 	initBuffer("./wav/haha.wav");
 	initBuffer("./wav/wow.wav");
 	initBuffer("./wav/introSound.wav");
-	initBuffer("./wav/gamoverSound.wav");
+	initBuffer("./wav/gameoverSound.wav");
+	initBuffer("./wav/bite.wav");
 	playSounds ( "./wav/background.wav", 0.1f, true, game.muted );
 	playSounds ( "./wav/introSound.wav", 0.1f, true, game.intromuted );
 	clock_gettime(CLOCK_REALTIME, &timeStart);

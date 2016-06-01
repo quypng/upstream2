@@ -29,11 +29,11 @@
 #define PI 3.141592
 
 struct Game *g;
-ALuint source[10];
-ALuint buffer[10];
+ALuint source[11];
+ALuint buffer[11];
 ALuint state;
-ALuint playBuffer[10];
-ALuint playSource[10];
+ALuint playBuffer[11];
+ALuint playSource[11];
 int bufferCount = 0;
 int sourceCount = 0;
 const double oobillion = 1.0 / 1e9;
@@ -111,6 +111,9 @@ int getSource(const char * sound)
 	else if (strcmp(sound,"./wav/gameoverSound.wav") == 0) {
 		return 10;
 	}
+	else if (strcmp(sound,"./wav/bite.wav") == 0) {
+		return 11;
+	}
 	else {
 		printf("%s hasn't been initialized\n\n", sound);
 		return -1;
@@ -160,7 +163,7 @@ void muteIntroSound(Game *game)
 
 void cleanUpSound()
 {
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < bufferCount; i++) {
 		alSourceStop(source[i]);
 		alDeleteSources(1, &source[i]);
 		alDeleteBuffers(1, &buffer[i]);
@@ -191,6 +194,11 @@ void stopIntroSound()
 void playIntroSound()
 {
 	alSourcePlay(source[9]);
+}
+
+void stopGameoverSound()
+{
+	alSourceStop(source[10]);
 }
 
 double timeDiff(struct timespec *start, struct timespec *end)
@@ -523,8 +531,11 @@ void drawBullet(Game *g)
 		glColor3f(1.0f, 1.0f, 1.0f);
 		glBegin(GL_QUADS);
 		glVertex2f(b->pos[0] - 5, b->pos[1] - 5);
+		glColor3f(1.0f, 1.0f, 1.0f);
 		glVertex2f(b->pos[0] + 5, b->pos[1] - 5);
+		glColor3f(1.0f, 1.0f, 1.0f);
 		glVertex2f(b->pos[0] + 5, b->pos[1] + 5);
+		glColor3f(1.0f, 1.0f, 1.0f);
 		glVertex2f(b->pos[0] - 5, b->pos[1] + 5);
 		glEnd();
 	}
@@ -532,14 +543,12 @@ void drawBullet(Game *g)
 
 void deleteBullet(Game *g, Bullet *b)
 {
-	b = &g->barr[1 - 1];
+	b = &g->barr[g->nbullets - 1];
 	g->nbullets--;
 }
 
 void updateBullet(Game *game)
 {
-	struct timespec bt;
-	clock_gettime(CLOCK_REALTIME, &bt);
 	for (int i=0; i<game->nbullets; i++) {
 		Bullet *b = &game->barr[i];
 		//move the bullet
@@ -563,16 +572,22 @@ void updateBullet(Game *game)
 
 void spawnBullet(Game *g)
 {
+	Bullet *b = &g->barr[g->nbullets];
+	struct timespec bt;
+	clock_gettime(CLOCK_REALTIME, &bt);
+	double ts = timeDiff(&b->time, &bt);
 	//spawn another bullet after its off the screen
 	//only one bullet on the screen at a time
-	if (g->nbullets < 1) {
+	if ( ts > 2.5 && g->nbullets < 1) {
+		timeCopy(&g->bulletTimer, &bt);
 		//shoot a bullet from monster position
-		Bullet *b = &g->barr[g->nbullets];
+		timeCopy(&b->time, &bt);
 		b->pos[0] = g->monster->getXpos();
 		b->pos[1] = g->monster->getYpos();
 		b->vel[0] = g->monster->getXvel();
 		b->vel[1] = g->monster->getYvel();
-		b->vel[1] += -3;
+		//Harder the difficulty, faster bullet moves
+		b->vel[1] += -2.0 * g->difficulty;
 		b->pos[1] += b->vel[1];
 		b->color[0] = 0.0f;
 		b->color[1] = 0.0f;

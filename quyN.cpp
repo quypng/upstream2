@@ -883,6 +883,7 @@ void check_gameover_mouse ( XEvent *e, Game *game )
 							playSounds ( "./wav/tick.wav",1.0f,
 									false, game->muted );
 							game->gameover^=true;
+							stopGameoverSound();
 							reset_game(game);
 							break;
 						case 11:
@@ -890,6 +891,7 @@ void check_gameover_mouse ( XEvent *e, Game *game )
 							playSounds ( "./wav/tick.wav",1.0f,
 									false, game->muted );
 							muteIntroSound(game);
+							stopGameoverSound();
 							game->gameover^=true;
 							game->main_menu^=true;
 							break;

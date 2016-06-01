@@ -13,6 +13,7 @@ using namespace std;
 extern void muteIntroSound(Game *game);
 extern void stopIntroSound(void);
 extern void playIntroSound(void);
+extern void stopGameoverSound();
 
 extern void playSounds(const char * sound, float gain, bool loop, bool muted);
 extern void muteSounds(Game *game);
