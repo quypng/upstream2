@@ -1,8 +1,10 @@
 // Author: Jonathan Dinh
 // Date written: 4/18/2016
-// Last Modified: 5/02/2016
+// Last Modified: 5/25/2016
 // Purpose: This file is responsible for all lilypads related functions such
-// as spawning lilypads, deleting lilypads, and behaviors of lilypads
+// as spawning lilypads, deleting lilypads, and behaviors of lilypads. Other
+// functions such as displaying score using sprites and communication with
+// server are included here as well.
 //
 
 #include <GL/glx.h>
@@ -34,8 +36,34 @@ char *build_get_query(char *host, char *page);
 using namespace std;
 struct Game game;
 unsigned char *buildAlphaData2(Ppmimage *img);
-
 float fade = 1.0;
+
+void displayFPS(int fps, Game *game)
+{
+    Rect r;
+
+    if (game->showfps) {
+        r.bot = game->windowHeight - 200;
+        r.left = game->windowWidth - 55;
+        r.center = 600;
+    } else {
+        r.bot = 210;
+        r.left = 310;
+        r.center = 600;
+    }
+    ggprint17( &r,100,0,"FPS: %d",fps );
+}
+
+void displayNlily(int nlily)
+{
+    Rect r;
+    r.bot = 235;
+    r.left = 300;
+    r.center = 600;
+    ggprint17 ( &r,100,0,"Lily count: %d",
+            nlily );
+}
+
 void drawRipple(int x, int y)
 {
     if (fade <= 0)
@@ -62,20 +90,20 @@ void drawRipple(int x, int y)
 void createLily(const int n, Game *game)
 {
     int wid;
-    if (game->score < 300) {
+    if (game->score < 600) {
         wid = 35;
     }
-    if (game->score >= 300) {
-        wid = 30;
+    if (game->score >= 600) {
+        wid = 32;
     }
-    if (game->score >= 800) {
-        wid = 25;
+    if (game->score >= 1000) {
+        wid = 28;
     }
-    if (game->score >= 1300) {
-        wid = 20;
+    if (game->score >= 1500) {
+        wid = 23;
     }
-    if (game->score >= 2000) {
-        wid = 15;
+    if (game->score >= 2100) {
+        wid = 17;
     }
 
     for (int i =0; i < n; i++) {
@@ -108,15 +136,20 @@ void createLily(const int n, Game *game)
 void checkLilies(Game *game)
 {
     if (game->stresstest == 1) {
-        game->maxtimer = 2;
+        game->maxtimer = 1;
     } else {
         game->maxtimer = 35;
     }
     //game timer for when to spawn new lily
     game->timer++;
     if (game->timer >= game->lilytimer) {
-        createLily(1,game);
-        game->nlily++;
+        if (game->stresstest == 1) {
+            for (int i = 0; i < 10; i++) {
+                createLily(1,game);
+            }
+        } else {
+            createLily(1,game);
+        }
         game->timer = 0;
     }
     //lilies falling down
@@ -178,13 +211,19 @@ void drawLilies(Game *game)
     Lilypad *node = game->ihead;
     while (node) {
         if (game->troll_lilypad == 1) {
+            int random = rand()%100+1;
+            if (random == 50) {
+                node->pos[1] += 20;
+            }
+            if (random == 51) {
+                node->pos[1] -= 20;
+            }
             if (!node->left) {
                 node->pos[0] += 2;
                 if (node->pos[0] > game->windowWidth) {
                     node->pos[0] = game->windowWidth;
                     node->left = true;
                 }
-
             } else {
                 node->pos[0] -= 2;
                 if (node->pos[0] < 0) {
@@ -277,7 +316,11 @@ void drawScore(int s, Game *game,int wid, int xpos, int ypos)
         //draw score
         glPushMatrix();
         glTranslatef(xpos, ypos, 0);
-        glBindTexture(GL_TEXTURE_2D, game->hscore->scoreTexture[idigit]);
+        if (game->isHighScore) {
+            glBindTexture(GL_TEXTURE_2D, game->hscore->scoreTexture[idigit]);
+        } else {
+            glBindTexture(GL_TEXTURE_2D, game->hscore->scoreTexture[idigit+10]);
+        }
         glEnable(GL_ALPHA_TEST);
         glAlphaFunc(GL_GREATER, 0.0f);
         glColor4ub(255,255,255,255);
@@ -324,24 +367,13 @@ void drawBubble(Game *game)
 {
     glBindTexture(GL_TEXTURE_2D, 0);
     Rect r;
-    r.bot = game->fly->getYpos()+50;
-	r.left = game->fly->getXpos()+100;
-	r.center = 10;
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glPushMatrix();
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-    int w = 100;
-	int h = 100;
-    glTranslatef(game->fly->getXpos()+w, game->fly->getYpos()+h, 0);
-	glBegin(GL_QUADS);
-		glVertex2i(-w,-h);
-		glVertex2i(-w, h);
-		glVertex2i( w, h);
-		glVertex2i( w,-h);
-	glEnd();
-	glPopMatrix();
-	ggfrog40b ( &r, 50, 0, "Ha Ha!" );
+    r.bot = game->fly->getYpos()+20;
+    r.left = game->fly->getXpos()+50;
+    r.center = 10;
+    if (game->isHighScore)
+        ggfrog40b ( &r, 50, 0, "WoW!" );
+    else if (game->showTaunt)
+        ggfrog40b ( &r, 50, 0, "Ha Ha!" );
 
 
 }
@@ -354,16 +386,17 @@ void flyBy(Game *game)
     y=6-y;
 
     game->fly->move (game->fly->getXpos(),
-                    game->fly->getYpos()-10,
-					game->fly->getXvel(),
-					game->fly->getYvel() );
+            game->fly->getYpos()-10,
+            game->fly->getXvel(),
+            game->fly->getYvel() );
 
 }
 
-void initHighScore(Game *game) {
+void initHighScore(Game *game)
+{
     char *host = (char*)"sleipnir.cs.csub.edu";
     char *tpage = (char*)
-		"/~jhargreaves/upstream/lowScore.txt";
+        "/~jhargreaves/upstream/lowScore.txt";
     //get highscore into text
     getHighScore(game, host, tpage,true,false);
 }
@@ -396,15 +429,15 @@ void drawHighScoreBox(Game *game)
 
     Rect r;
     r.bot = game->hscorebox->pos[1];
-	r.left = game->hscorebox->pos[0];
-	int xpos = game->hscorebox->pos[0]-getMidpoint(game);
-	int ypos = game->hscorebox->pos[1]+25;
-	glColor3i(1,1,0);
+    r.left = game->hscorebox->pos[0];
+    int xpos = game->hscorebox->pos[0]-getMidpoint(game);
+    int ypos = game->hscorebox->pos[1]+25;
+    glColor3i(1,1,0);
 
-	drawScore(game->tempscore,game,20,xpos,ypos);
-	r.bot = game->hscorebox->pos[1]-80;
-	r.left = game->hscorebox->pos[0];
-	ggprint40 (&r,50,0,"%s", &game->playername);
+    drawScore(game->tempscore,game,20,xpos,ypos);
+    r.bot = game->hscorebox->pos[1]-80;
+    r.left = game->hscorebox->pos[0];
+    ggprint40 (&r,50,0,"%s", &game->playername);
 }
 
 // remove the character | from name
@@ -430,8 +463,8 @@ void getName(XEvent *e, Game *game)
     int key;
     // check for return key before other keys
     if ( e->type == KeyPress ) {
-		key = XLookupKeysym ( &e->xkey, 0 );
-		switch ( key ) {
+        key = XLookupKeysym ( &e->xkey, 0 );
+        switch ( key ) {
             case XK_BackSpace:
                 if (strlen(game->playername)==11) {
                     game->playername[strlen(game->playername)-1] = '\0';
@@ -443,151 +476,155 @@ void getName(XEvent *e, Game *game)
                 if (strlen(game->playername)==11)
                     removebar(game);
                 if (strlen(game->playername) == 0)
-                strcat(game->playername, "player");
+                    strcat(game->playername, "player");
                 game->isHighScore = false;
+                game->showTaunt = true;
                 // Kevin's function to write score to site
-                sendScoresToPHP(game->playername, game->tempscore, game->difficulty);
+                sendScoresToPHP(game->playername, game->tempscore,
+                        game->difficulty);
                 game->tempscore = 0;
                 resetName(game);
                 break;
-		}
+        }
     }
     // max length is 8 characters
     if (strlen(game->playername) > 10)
         return;
     if ( e->type == KeyPress ) {
-		key = XLookupKeysym ( &e->xkey, 0 );
-		switch ( key ) {
+        key = XLookupKeysym ( &e->xkey, 0 );
+        switch ( key ) {
             case XK_BackSpace:
                 if (strlen(game->playername)>0 && strlen(game->playername)<=10 )
                     game->playername[strlen(game->playername)-1] = '\0';
                 break;
-			case XK_a:
-				strcat(game->playername,"a");
-				break;
+            case XK_a:
+                strcat(game->playername,"a");
+                break;
             case XK_b:
-				strcat(game->playername,"b");
-				break;
-			case XK_c:
-				strcat(game->playername,"c");
-				break;
+                strcat(game->playername,"b");
+                break;
+            case XK_c:
+                strcat(game->playername,"c");
+                break;
             case XK_d:
-				strcat(game->playername,"d");
-				break;
+                strcat(game->playername,"d");
+                break;
             case XK_e:
-				strcat(game->playername,"e");
-				break;
+                strcat(game->playername,"e");
+                break;
             case XK_f:
-				strcat(game->playername,"f");
-				break;
+                strcat(game->playername,"f");
+                break;
             case XK_g:
-				strcat(game->playername,"g");
-				break;
+                strcat(game->playername,"g");
+                break;
             case XK_h:
-				strcat(game->playername,"h");
-				break;
+                strcat(game->playername,"h");
+                break;
             case XK_i:
-				strcat(game->playername,"i");
-				break;
+                strcat(game->playername,"i");
+                break;
             case XK_j:
-				strcat(game->playername,"j");
-				break;
+                strcat(game->playername,"j");
+                break;
             case XK_k:
-				strcat(game->playername,"k");
-				break;
-			case XK_l:
-				strcat(game->playername,"l");
-				break;
-			case XK_m:
+                strcat(game->playername,"k");
+                break;
+            case XK_l:
+                strcat(game->playername,"l");
+                break;
+            case XK_m:
                 strcat(game->playername,"m");
-				break;
-			case XK_n:
+                break;
+            case XK_n:
                 strcat(game->playername,"n");
-				break;
-			case XK_o:
+                break;
+            case XK_o:
                 strcat(game->playername,"o");
-				break;
-			case XK_p:
+                break;
+            case XK_p:
                 strcat(game->playername,"p");
-				break;
+                break;
             case XK_q:
                 strcat(game->playername,"q");
-				break;
-			case XK_r:
+                break;
+            case XK_r:
                 strcat(game->playername,"r");
-				break;
+                break;
             case XK_s:
                 strcat(game->playername,"s");
-				break;
+                break;
             case XK_t:
                 strcat(game->playername,"t");
-				break;
+                break;
             case XK_u:
                 strcat(game->playername,"u");
-				break;
-			case XK_v:
+                break;
+            case XK_v:
                 strcat(game->playername,"v");
-				break;
+                break;
             case XK_w:
                 strcat(game->playername,"w");
-				break;
+                break;
             case XK_x:
                 strcat(game->playername,"x");
-				break;
+                break;
             case XK_y:
                 strcat(game->playername,"y");
-				break;
+                break;
             case XK_z:
                 strcat(game->playername,"z");
-				break;
+                break;
             case XK_0:
                 strcat(game->playername,"0");
-				break;
+                break;
             case XK_1:
                 strcat(game->playername,"1");
-				break;
+                break;
             case XK_2:
                 strcat(game->playername,"2");
-				break;
+                break;
             case XK_3:
                 strcat(game->playername,"3");
-				break;
-			case XK_4:
+                break;
+            case XK_4:
                 strcat(game->playername,"4");
-				break;
+                break;
             case XK_5:
                 strcat(game->playername,"5");
-				break;
+                break;
             case XK_6:
                 strcat(game->playername,"6");
-				break;
+                break;
             case XK_7:
                 strcat(game->playername,"7");
-				break;
+                break;
             case XK_8:
                 strcat(game->playername,"8");
-				break;
+                break;
             case XK_9:
                 strcat(game->playername,"9");
-				break;
+                break;
             case XK_Return:
                 game->isHighScore = false;
+                game->showTaunt = false;
                 game->tempscore = 0;
                 resetName(game);
                 break;
-			case XK_Escape:
+            case XK_Escape:
                 game->isHighScore = false;
+                game->showTaunt = false;
                 resetName(game);
                 game->tempscore = 0;
-				break;
-		}
-	}
-	addbar(game);
+                break;
+        }
+    }
+    addbar(game);
 }
 
 bool checkHighScore(Game *game, int s)
 {
-    if (game->score == 0) {
+    if (s == 0) {
         return false;
     }
     int difficulty = game->difficulty;
@@ -614,7 +651,6 @@ bool checkHighScore(Game *game, int s)
             string stmp = score;
             int _score = atoi(stmp.c_str());
             if (s > _score) {
-                cout << "true";
                 return true;
             }
         }
@@ -644,16 +680,16 @@ bool getHighScore(Game *game,char shost[],char spage[],bool cscore,bool pscore)
     tmpres = inet_pton(AF_INET, ip, (void *)(&(remote->sin_addr.s_addr)));
     if (tmpres < 0) {
         perror("Can't set remote->sin_addr.s_addr");
-        exit(1);
+        return false;
     } else if (tmpres == 0) {
         fprintf(stderr, "%s is not a valid IP address\n", ip);
-        exit(1);
+        return false;
     }
     remote->sin_port = htons(PORT);
 
     if (connect(sock,(struct sockaddr *)remote,sizeof(struct sockaddr)) < 0) {
         perror("Could not connect");
-        exit(1);
+        return false;
     }
     get = build_get_query(host, page);
     //Send the query to the server
@@ -662,7 +698,7 @@ bool getHighScore(Game *game,char shost[],char spage[],bool cscore,bool pscore)
         tmpres = send(sock, get+sent, strlen(get)-sent, 0);
         if (tmpres == -1) {
             perror("Can't send query");
-            exit(1);
+            return false;
         }
         sent += tmpres;
     }

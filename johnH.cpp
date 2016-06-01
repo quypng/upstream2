@@ -3,6 +3,7 @@
 //frog,log,gator,bridge
 //splash and background water
 #include "johnH.h"
+using namespace tinyxml2;
 
 //convert png to ppm read in texture and destroy ppm
 Ppmimage* get_image ( std::string filename )
@@ -122,12 +123,12 @@ void Frog::render ( void )
 			current.frame++;
 		}
 		if ( current.x_vel <= 0 && current.frame <= 10 &&
-		        current.frame > 5 && current.y_vel>0 ) {
+				current.frame > 5 && current.y_vel>0 ) {
 			glBindTexture ( GL_TEXTURE_2D, frogTexture[2] );
 			current.frame++;
 		}
 		if ( current.x_vel <= 0 && /*current.frame <= 20 && */
-		        current.frame > 10 && current.y_vel>0 ) {
+				current.frame > 10 && current.y_vel>0 ) {
 			glBindTexture ( GL_TEXTURE_2D, frogTexture[3] );
 			current.frame++;
 		}
@@ -137,7 +138,7 @@ void Frog::render ( void )
 			current.frame--;
 		}
 		if ( current.x_vel <= 0 && current.frame >= 5 &&
-		        current.frame<=10 && current.y_vel<0 ) {
+				current.frame<=10 && current.y_vel<0 ) {
 			glBindTexture ( GL_TEXTURE_2D, frogTexture[4] );
 			current.frame--;
 		}
@@ -177,8 +178,8 @@ void Frog::render ( void )
 		}
 		//sitting still
 		if ( current.x_vel==0 && current.y_vel==0 &&
-		        current.x_pos == previous.x_pos &&
-		        right<=0 && left<=0 ) {
+				current.x_pos == previous.x_pos &&
+				right<=0 && left<=0 ) {
 			int r   =   rand() %500+1;
 			if ( r>2 && blink== 0 && wink == 0 )
 				glBindTexture ( GL_TEXTURE_2D, frogTexture[0] );
@@ -245,7 +246,20 @@ void Frog::render ( void )
 
 void Bridge::render ( void )
 {
-	if ( current.x_pos<-100 ) {
+	if ( current.y_pos < 80 ) {
+
+		glColor3f ( 1.0, 1.0, 1.0 );
+		glPushMatrix();
+		//draw a line at bottom of screen
+		glLineWidth (3);
+		glColor3f ( 200.0, 0.0, 0.0 );
+		glBindTexture ( GL_TEXTURE_2D, 0 );
+		glBegin ( GL_LINES );
+		// start position
+		glVertex2f ( WIDTH, 85 );
+		// end position
+		glVertex2f ( 0, 85);
+		glEnd();
 		//bridge is offscreen
 	}
 	float wid = 500.0f; // size of bridge sprite
@@ -398,16 +412,62 @@ void Gator::render ( void )
 	glEnable ( GL_TEXTURE_2D );
 }
 // end Gator render ============================================
+void WaterBG::render ( void )
+{
+	if ( current.x_pos<-100 ) {
+		//hud is offscreen
+	}
+	float wid = 800.0f; // size of waterbg sprite
 
+	glColor3f ( 1.0, 1.0, 1.0 );
+	glPushMatrix();
+	glTranslatef ( current.x_pos, current.y_pos, 0 );
+	current.frame++;
+	int frame = current.frame % 2;
+	glBindTexture ( GL_TEXTURE_2D, waterbgTexture[frame] );
+	if ( current.frame<=10 ) {
+		glBindTexture ( GL_TEXTURE_2D, waterbgTexture[0] );
+		current.frame++;
+	}
+	if ( current.frame>10 && current.frame <=20 ) {
+		glBindTexture ( GL_TEXTURE_2D, waterbgTexture[1] );
+		current.frame++;
+	}
+	if ( current.frame>=20 )
+		current.frame=0;
+	glEnable ( GL_ALPHA_TEST );
+	glAlphaFunc ( GL_GREATER, 0.0f );
+	glColor4ub ( 255,255,255,255 );
+	glBegin ( GL_QUADS );
+	glTexCoord2f ( 0.0f, 1.0f );
+	glVertex2i ( -wid,-wid );
+	glTexCoord2f ( 0.0f, 0.0f );
+	glVertex2i ( -wid, wid );
+	glTexCoord2f ( 1.0f, 0.0f );
+	glVertex2i ( wid, wid );
+	glTexCoord2f ( 1.0f, 1.0f );
+	glVertex2i ( wid,-wid );
+	glEnd();
+	glPopMatrix();
+	glDisable ( GL_ALPHA_TEST );
+	glDisable ( GL_TEXTURE_2D );
+	glBlendFunc ( GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA );
+	glEnable ( GL_BLEND );
+	glDisable ( GL_BLEND );
+	glEnable ( GL_TEXTURE_2D );
+}
+// end waterbg render ===========================================
+
+// =============================================================
 void Water::render ( void )
 {
 	current.x_pos += current.x_vel;
 	current.y_pos += current.y_vel;
 	if ( current.y_pos<-300 ) {
 		current.x_pos = WIDTH/2;
-		current.y_pos = HEIGHT+500;
+		current.y_pos = HEIGHT+300;
 	}
-	float wid = 600.0f; // size of water
+	float wid = 300; // size of water
 	glColor3f ( 1.0, 1.0, 1.0 );
 	glPushMatrix();
 	glTranslatef ( current.x_pos, current.y_pos, 0 );
@@ -489,6 +549,49 @@ void Splash::render ( void )
 }
 // end splash render ===========================================
 
+void Explosion::render ( void )
+{
+	float wid = 100.0f; // size of explosion sprite
+	glColor3f ( 1.0, 1.0, 1.0 );
+	glPushMatrix();
+	glTranslatef ( current.x_pos, current.y_pos, 0 );
+	glBindTexture ( GL_TEXTURE_2D, explosionTexture[0] );
+	for ( int i=0; i<5; i++ ) {
+		current.frame++;
+		if ( current.frame >=i*30 && current.frame <=200 ) {
+			glBindTexture ( GL_TEXTURE_2D, explosionTexture[i] );
+		}
+		if ( current.frame >=200 ) {
+			current.x_pos = -500;
+			current.y_pos = -500;
+		}
+	}
+	if ( current.frame>500 )
+		current.frame=500;
+	glEnable ( GL_ALPHA_TEST );
+	glAlphaFunc ( GL_GREATER, 0.0f );
+	glColor4ub ( 255,255,255,255 );
+	glBegin ( GL_QUADS );
+	glTexCoord2f ( 0.0f, 1.0f );
+	glVertex2i ( -wid,-wid );
+	glTexCoord2f ( 0.0f, 0.0f );
+	glVertex2i ( -wid, wid );
+	glTexCoord2f ( 1.0f, 0.0f );
+	glVertex2i ( wid, wid );
+	glTexCoord2f ( 1.0f, 1.0f );
+	glVertex2i ( wid,-wid );
+	glEnd();
+	glPopMatrix();
+	glDisable ( GL_ALPHA_TEST );
+	glDisable ( GL_TEXTURE_2D );
+	glBlendFunc ( GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA );
+	glEnable ( GL_BLEND );
+	glDisable ( GL_BLEND );
+	glEnable ( GL_TEXTURE_2D );
+}
+// end explosion render ========================================
+
+// =============================================================
 void RocketPack::render ( void )
 {
 	float wid = 30.0f; // size of splash sprite
@@ -541,6 +644,7 @@ void RocketPack::render ( void )
 void Turtle::render ( void )
 {
 	int r = rand() %600+1;
+	int goldenChance = rand() %2000+1;
 	current.x_pos += current.x_vel;
 	current.y_pos += current.y_vel;
 	//std::cout<<"turtle="<<current.frame<<","<<current.y_pos<< std::endl;
@@ -548,33 +652,59 @@ void Turtle::render ( void )
 		current.x_pos = 0-100;
 		current.y_pos = HEIGHT-r;
 	}
+	if ( goldenChance==1 || goldenFrames>0 ) {
+		golden = true;
+		goldenFrames++;
+	}
+	if ( goldenFrames>500 ) {
+		golden = false;
+		goldenFrames =0;
+	}
 	float wid = 40.0f; // size of turtlesprite
 	glColor3f ( 1.0, 1.0, 1.0 );
 	glPushMatrix();
 	glTranslatef ( current.x_pos, current.y_pos, 0 );
 	glBindTexture ( GL_TEXTURE_2D, turtleTexture[0] );
 	if (  current.frame <20 ) {
-		glBindTexture ( GL_TEXTURE_2D, turtleTexture[0] );
+		if ( !golden )
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[0] );
+		else
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[6] );
 		current.frame++;
 	}
 	if ( current.frame>=20 && current.frame <=30 ) {
-		glBindTexture ( GL_TEXTURE_2D, turtleTexture[1] );
+		if ( !golden )
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[1] );
+		else
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[7] );
 		current.frame++;
 	}
 	if ( current.frame>=30 && current.frame <=40 ) {
-		glBindTexture ( GL_TEXTURE_2D, turtleTexture[2] );
+		if ( !golden )
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[2] );
+		else
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[8] );
 		current.frame++;
 	}
 	if ( current.frame>=40 && current.frame <=50 ) {
-		glBindTexture ( GL_TEXTURE_2D, turtleTexture[3] );
+		if ( !golden )
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[3] );
+		else
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[9] );
 		current.frame++;
 	}
 	if ( current.frame>=50 && current.frame <=60 ) {
-		glBindTexture ( GL_TEXTURE_2D, turtleTexture[4] );
+		if ( !golden )
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[4] );
+		else
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[10] );
 		current.frame++;
 	}
 	if ( current.frame>=60 ) {
-		glBindTexture ( GL_TEXTURE_2D, turtleTexture[5] );
+		if ( !golden )
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[5] );
+		else
+			glBindTexture ( GL_TEXTURE_2D, turtleTexture[11] );
 		current.frame++;
 	}
 	if ( current.frame>100 )
@@ -604,9 +734,9 @@ void Turtle::render ( void )
 
 
 // Render fly =============================================
-void Fly::render ( void )
+void Fly::render ( float sze )
 {
-	float wid = 20.0f; // size of fly sprite
+	float wid = sze; //20.0f; // size of fly sprite
 	glColor3f ( 1.0, 1.0, 1.0 );
 	if ( alive ) {
 		if ( current.y_pos<30 ) {
@@ -759,7 +889,60 @@ void Meter::render ( void )
 }
 // end meter render ===========================================
 
-
+//read high scores XML ===============================
+std::string loadScores ( int player )
+{
+	int counter=0;
+	XMLDocument* doc = new XMLDocument();
+	doc->LoadFile ( "highscore.xml" );
+	int errorID = doc->ErrorID();
+	std::string err = doc->ErrorName();
+	std::string playerString[20][3];
+	XMLPrinter printer;
+	//std::cout << "Test file loaded. ErrorID = "<<errorID<<" "<<err<<std::endl;
+	if ( errorID!=0 )
+		return "";
+	XMLNode* root = doc->FirstChildElement ( "players" );
+	if ( root == NULL ) {
+		std::cout<<"error xml root"<<std::endl;
+		return "";
+	}
+	XMLElement* node = root->FirstChildElement ( "player" )->ToElement();
+	if ( node == NULL ) {
+		std::cout<<"error xml"<<std::endl;
+		return "";
+	}
+	while ( node->NextSiblingElement() !=NULL && counter<=player ) {
+		XMLElement* element = node->FirstChildElement ( "name" )->ToElement();
+		if ( element == NULL ) {
+			std::cout<<"error xml"<<std::endl;
+			return "";
+		}
+		playerString[counter][0] = element->GetText();
+		//std::cout <<"playerstring="<<playerString[counter][0]<<std::endl;
+		element = element->NextSiblingElement ( "score" )->ToElement();
+		if ( element == NULL ) {
+			std::cout<<"error xml"<<std::endl;
+			return "";
+		}
+		playerString[counter][1] = element->GetText();
+		element = element->NextSiblingElement ( "mode" )->ToElement();
+		if ( element == NULL ) {
+			std::cout<<"error xml"<<std::endl;
+			return "";
+		}
+		playerString[counter][2] = element->GetText();
+		node = node->NextSiblingElement ( "player" )->ToElement();
+		if ( node == NULL ) {
+			std::cout<<"error xml"<<std::endl;
+			return "";
+		}
+		counter++;
+	}
+	return playerString[player][0]+", "+playerString[player][1]+", "
+		+playerString[player][2];
+}
+// end read high scores =========================
 
 // =============================================================
 unsigned char *buildAlphaData ( Ppmimage *img )

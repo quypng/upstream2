@@ -8,6 +8,7 @@ struct Lilypad;
 struct LilyTexture;
 struct Score;
 struct HighScoreBox;
+struct ButtonTextures;
 struct Circle {
 	float radius;
 	float newPosX;
@@ -21,15 +22,12 @@ struct Circle {
 	int detail;
 };
 
-#define MAXBUTTONS 13
+#define MAXBUTTONS 15
 typedef struct t_button {
 	Rect r;
 	char text[32];
 	int over;
-	int down;
-	int click;
 	float color[3];
-	float dcolor[3];
 	unsigned int text_color;
 } Button;
 
@@ -40,18 +38,37 @@ struct Demo {
 	int jump;
 };
 
+struct Bullet {
+	Vec pos;
+	Vec vel;
+	float color[3];
+	struct timespec time;
+	struct Bullet *prev;
+	struct Bullet *next;
+	Bullet() {
+		prev = NULL;
+		next = NULL;
+	}
+};
+
 #define EASY    1
 #define MED     2
 #define HARD    3
 
 struct Game {
+	int lilycount;
+	int fps;
+	int showfps;
 	int lives;
 	int gameover;
+	bool bossGO;
 	bool done;
 	int difficulty; //1=easy,2=med,3=hard
 	Demo demo;
 	bool playing;
 	bool isHighScore;
+	bool rocketSound;
+	int x;  // fly x position in game over
 	int troll_lilypad;
 	int windowWidth;
 	int windowHeight;
@@ -62,6 +79,7 @@ struct Game {
 	int scoreCount;
 	bool muted ;
 	bool hschecked;
+	bool showTaunt;
 	int nlily;
 	int timer;
 	int maxtimer;
@@ -69,6 +87,9 @@ struct Game {
 	int lilyspawnpoint; //y coordinate of where lilies spawn
 	int stresstest;
 	int tempscore;
+	int nbullets;
+	Bullet *barr;
+	struct timespec bulletTimer;
 	char playername[256];
 	char hsname[256];
 	Lilypad *ihead;
@@ -82,12 +103,19 @@ struct Game {
 	Frog *frog;
 	Gator *gator;
 	Fly *fly;
+	Monster *monster;
+	int swarmSize;
+	Fly *swarm[20];
+	bool swarmOn;
 	Log *log[4];
 	Water *water[3];
+	WaterBG *waterbg;
 	Bridge *bridge;
 	Splash *splash;
+	Explosion *explosion;
 	Turtle *turtle;
 	RocketPack *rocketPack;
+	std::string highScores[20];
 
 	//Game menu
 	bool main_menu;
@@ -95,40 +123,55 @@ struct Game {
 	bool gameover_menu;
 	IntroBG *introbg;
 	PausedBG *pausedbg;
+	GameoverBG *gameoverbg;
+	ButtonTextures *buttonT;
+	bool intromuted;
 
-	//Ppmimage *introbgImage;
-	//GLuint introbgTexture;
+	//highscore display
+	bool highscoreboard;
+	highscoreBG *highscorebg;
+
+	//credits
+	bool credits;
+
 	Button button[MAXBUTTONS];
 	int nbuttons;
-	//
-	//ALuint alBufferDrip, alBufferTick;
-	//ALuint alSourceDrip, alSourceTick;
+	int count;
+
+	//Help Menu
+	bool help_menu;
+	helpBG *helpbg;
 
 	Game()
 	{
-		done = false;
-		c.isStanding = true;
-		tempscore = 0;
+		//game resolution
 		windowWidth = 600;
 		windowHeight = 760;
+
+		done = false;
+		c.isStanding = true;
+		showTaunt = true;
+		tempscore = 0;
 		troll_lilypad = 0;
 		stresstest = 0;
-        isHighScore = false;
-        playername[0] = '\0';
-        hsname[0] = '|';
+		isHighScore = false;
+		playername[0] = '\0';
+		hsname[0] = '|';
 		//init for game menu
 		main_menu = false;
 		sub_menu = true;
 		gameover_menu = false;
 		gameover = false;
-		// buttons
+		highscoreboard = false;
+		credits = false;
+		count = 2;
+		// buttons count
 		nbuttons = 0;
-		//introbgImage=NULL;
+		intromuted = false;
 	}
 };
 
 extern void init_game ( Game *game );
 extern void demo ( Game *game );
-
 
 #endif

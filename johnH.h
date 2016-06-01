@@ -17,6 +17,8 @@
 #include "log.h"
 #include "ppm.h"
 #include "fonts.h"
+#include "tinyxml2.h"
+
 
 
 //defined types
@@ -34,7 +36,62 @@ struct Position {
 extern Position update_position ( Position *c,float,float,float,float );
 extern unsigned char *buildAlphaData ( Ppmimage *img );
 extern Ppmimage*  get_image ( std::string filename );
+extern std::string loadScores ( int player );
 
+class helpBG
+{
+private:
+	Position current;
+	Position previous;
+	Ppmimage *helpbgImage;
+	GLuint helpbgTexture;
+public:
+// Constructor with default values for data members
+	helpBG()
+	{
+		current.frame = 0;
+		current.x_pos = WIDTH;
+		current.y_pos = HEIGHT;
+		current.x_vel = 0;
+		current.y_vel = -1;
+		previous = current;
+		helpbgImage = get_image ( "./images/helpbg" );
+//create opengl texture elements
+		glGenTextures ( 1, &helpbgTexture );
+		int w = helpbgImage->width;
+		int h = helpbgImage->height;
+//
+		glBindTexture ( GL_TEXTURE_2D, helpbgTexture );
+		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST );
+		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
+		unsigned char *helpbgData = buildAlphaData ( helpbgImage );
+		glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+		               GL_RGBA, GL_UNSIGNED_BYTE, helpbgData );
+		free ( helpbgData );
+	} //end constructor
+//--------------------------------------------------------------------
+	void render ( void );
+	float getXpos()
+	{
+		return current.x_pos;
+	}
+	float getYpos()
+	{
+		return current.y_pos;
+	}
+	float getXvel()
+	{
+		return current.x_vel;
+	}
+	float getYvel()
+	{
+		return current.y_vel;
+	}
+	void move ( float xp, float yp, float xv, float yv )
+	{
+		current = update_position ( &current,xp,yp,xv,yv );
+	}
+};
 
 class HUD
 {
@@ -65,7 +122,7 @@ public:
 		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
 		unsigned char *hudData = buildAlphaData ( hudImage[i] );
 		glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-		               GL_RGBA, GL_UNSIGNED_BYTE, hudData );
+						GL_RGBA, GL_UNSIGNED_BYTE, hudData );
 		free ( hudData );
 	} //end constructor
 	void render ( void );
@@ -101,7 +158,7 @@ public:
 		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
 		unsigned char *introbgData = buildAlphaData ( introbgImage[i] );
 		glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-		               GL_RGBA, GL_UNSIGNED_BYTE, introbgData );
+						GL_RGBA, GL_UNSIGNED_BYTE, introbgData );
 		free ( introbgData );
 	} //end constructor
 	//--------------------------------------------------------------------
@@ -156,7 +213,7 @@ public:
 		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
 		unsigned char *pausedbgData = buildAlphaData ( pausedbgImage );
 		glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-		               GL_RGBA, GL_UNSIGNED_BYTE, pausedbgData );
+						GL_RGBA, GL_UNSIGNED_BYTE, pausedbgData );
 		free ( pausedbgData );
 	} //end constructor
 	//--------------------------------------------------------------------
@@ -183,6 +240,192 @@ public:
 	}
 };
 
+class GameoverBG
+{
+private:
+	Position current;
+	Position previous;
+	Ppmimage *gameoverImage;
+	GLuint gameoverTexture;
+public:
+	// Constructor with default values for data members
+	GameoverBG()
+	{
+		current.frame = 0;
+		current.x_pos = WIDTH;
+		current.y_pos = HEIGHT;
+		current.x_vel = 0;
+		current.y_vel = -1;
+		previous = current;
+		gameoverImage = get_image ( "./images/gameoverbg" );
+		//create opengl texture elements
+		glGenTextures ( 1, &gameoverTexture );
+		int w = gameoverImage->width;
+		int h = gameoverImage->height;
+		//
+		glBindTexture ( GL_TEXTURE_2D, gameoverTexture );
+		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST );
+		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
+		unsigned char *gameoverData = buildAlphaData ( gameoverImage );
+		glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+						GL_RGBA, GL_UNSIGNED_BYTE, gameoverData );
+		free ( gameoverData );
+	} //end constructor
+	//--------------------------------------------------------------------
+	void render ( void );
+	float getXpos()
+	{
+		return current.x_pos;
+	}
+	float getYpos()
+	{
+		return current.y_pos;
+	}
+	float getXvel()
+	{
+		return current.x_vel;
+	}
+	float getYvel()
+	{
+		return current.y_vel;
+	}
+	void move ( float xp, float yp, float xv, float yv )
+	{
+		current = update_position ( &current,xp,yp,xv,yv );
+	}
+};
+
+class highscoreBG
+{
+private:
+	Position current;
+	Position previous;
+	Ppmimage *highscorebgImage;
+	GLuint highscorebgTexture;
+public:
+	highscoreBG()
+	{
+		current.frame = 0;
+		current.x_pos = WIDTH;
+		current.y_pos = HEIGHT;
+		current.x_vel = 0;
+		current.y_vel = -1;
+		previous = current;
+		highscorebgImage = get_image ( "./images/highscorebg" );
+
+		glGenTextures ( 1, &highscorebgTexture );
+		int w = highscorebgImage->width;
+		int h = highscorebgImage->height;
+
+		glBindTexture ( GL_TEXTURE_2D, highscorebgTexture );
+		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST );
+		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
+		unsigned char *highscorebgData = buildAlphaData ( highscorebgImage );
+		glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+		               GL_RGBA, GL_UNSIGNED_BYTE, highscorebgData );
+		free ( highscorebgData );
+	}
+//--------------------------------------------------------------------
+	void render ( void );
+	float getXpos()
+	{
+		return current.x_pos;
+	}
+	float getYpos()
+	{
+		return current.y_pos;
+	}
+	float getXvel()
+	{
+		return current.x_vel;
+	}
+	float getYvel()
+	{
+		return current.y_vel;
+	}
+	void move ( float xp, float yp, float xv, float yv )
+	{
+		current = update_position ( &current,xp,yp,xv,yv );
+	}
+};
+// =========================================================
+class Monster
+{
+	private:
+		Position current;
+		Position previous;
+		Ppmimage *monsterImage[7];
+		GLuint monsterTexture[7];
+
+	public:
+		// Constructor with default values for data members
+		Monster()
+		{
+			current.frame = 0;
+			current.x_pos = 0;
+			current.y_pos = HEIGHT - 150;
+			current.x_vel = 0;
+			current.y_vel = 0;
+			previous = current;
+		monsterImage[0] = get_image ( "./images/monster" );
+		monsterImage[1] = get_image ( "./images/monster1" );
+		monsterImage[2] = get_image ( "./images/monster2" );
+		monsterImage[3] = get_image ( "./images/monster3" );
+		monsterImage[4] = get_image ( "./images/monster4" );
+		monsterImage[5] = get_image ( "./images/monster5" );
+		monsterImage[6] = get_image ( "./images/monster6" );
+		for ( int i =0; i<7; i++ ) {
+			//create opengl texture elements
+			glGenTextures ( 1, &monsterTexture[i] );
+			int w = monsterImage[i]->width;
+			int h = monsterImage[i]->height;
+			//
+			glBindTexture ( GL_TEXTURE_2D, monsterTexture[i] );
+			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,
+					GL_NEAREST );
+			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
+					GL_NEAREST );
+			unsigned char *monsterData = buildAlphaData ( monsterImage[i] );
+			glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+					GL_RGBA, GL_UNSIGNED_BYTE, monsterData );
+			free ( monsterData);
+			}
+		} //end constructor
+		//--------------------------------------------------------------------
+		float getFrame()
+		{
+			return current.frame;
+		}
+		void setFrame ( float x )
+		{
+			current.frame=x;
+		}
+		void render ( void );
+		float getXpos()
+		{
+			return current.x_pos;
+		}
+		float getYpos()
+		{
+			return current.y_pos;
+		}
+		float getXvel()
+		{
+			return current.x_vel;
+		}
+		float getYvel()
+		{
+			return current.y_vel;
+		}
+		void move ( float xp, float yp, float xv, float yv )
+		{
+			current = update_position ( &current,xp,yp,xv,yv );
+			current.frame=0;
+		}
+};
+
+
+// =========================================================
 class Frog
 {
 private:
@@ -243,12 +486,12 @@ public:
 			//
 			glBindTexture ( GL_TEXTURE_2D, frogTexture[i] );
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,
-			                  GL_NEAREST );
+								GL_NEAREST );
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
-			                  GL_NEAREST );
+								GL_NEAREST );
 			unsigned char *frogData = buildAlphaData ( frogImage[i] );
 			glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-			               GL_RGBA, GL_UNSIGNED_BYTE, frogData );
+							GL_RGBA, GL_UNSIGNED_BYTE, frogData );
 			free ( frogData );
 		}
 	} //end constructor
@@ -380,12 +623,12 @@ public:
 			int h = flyImage[i]->height;
 			glBindTexture ( GL_TEXTURE_2D, flyTexture[i] );
 			glTexParameteri ( GL_TEXTURE_2D,
-			                  GL_TEXTURE_MAG_FILTER,GL_NEAREST );
+								GL_TEXTURE_MAG_FILTER,GL_NEAREST );
 			glTexParameteri ( GL_TEXTURE_2D,
-			                  GL_TEXTURE_MIN_FILTER,GL_NEAREST );
+								GL_TEXTURE_MIN_FILTER,GL_NEAREST );
 			unsigned char *flyData = buildAlphaData ( flyImage[i] );
 			glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-			               GL_RGBA, GL_UNSIGNED_BYTE, flyData );
+							GL_RGBA, GL_UNSIGNED_BYTE, flyData );
 			free ( flyData );
 		}
 	} //end constructor
@@ -400,7 +643,7 @@ public:
 		current.frame = frame;
 	}
 
-	void render ( void );
+	void render ( float );
 
 	float getXpos()
 	{
@@ -463,7 +706,7 @@ public:
 		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
 		unsigned char *bridgeData = buildAlphaData ( bridgeImage[i] );
 		glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-		               GL_RGBA, GL_UNSIGNED_BYTE, bridgeData );
+						GL_RGBA, GL_UNSIGNED_BYTE, bridgeData );
 		free ( bridgeData );
 	} //end constructor
 	//--------------------------------------------------------------------
@@ -524,7 +767,7 @@ public:
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
 			unsigned char *logData = buildAlphaData ( logImage[i] );
 			glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-			               GL_RGBA, GL_UNSIGNED_BYTE, logData );
+							GL_RGBA, GL_UNSIGNED_BYTE, logData );
 			free ( logData );
 		}
 	} //end constructor
@@ -588,12 +831,12 @@ public:
 			int h = gatorImage[i]->height;
 			glBindTexture ( GL_TEXTURE_2D, gatorTexture[i] );
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,
-			                  GL_NEAREST );
+								GL_NEAREST );
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
-			                  GL_NEAREST );
+								GL_NEAREST );
 			unsigned char *gatorData = buildAlphaData ( gatorImage[i] );
 			glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-			               GL_RGBA, GL_UNSIGNED_BYTE, gatorData );
+							GL_RGBA, GL_UNSIGNED_BYTE, gatorData );
 			free ( gatorData );
 		}
 	} //end constructor
@@ -631,6 +874,64 @@ public:
 };
 //end gator class ==============================================
 
+class WaterBG
+{
+private:
+	Position current;
+	Position previous;
+	Ppmimage *waterbgImage[2];
+	GLuint waterbgTexture[2];
+public:
+	// Constructor with default values for data members
+	WaterBG()
+	{
+		current.frame = 0;
+		current.x_pos = WIDTH;
+		current.y_pos = HEIGHT;
+		current.x_vel = 0;
+		current.y_vel = -1;
+		previous = current;
+		waterbgImage[0] = get_image ( "./images/waterBG" );
+		waterbgImage[1] = get_image ( "./images/waterBG1" );
+		for ( int i=0; i<2; i++ ) {
+		//create opengl texture elements
+		glGenTextures ( 1, &waterbgTexture[i] );
+		int w = waterbgImage[i]->width;
+		int h = waterbgImage[i]->height;
+		//
+		glBindTexture ( GL_TEXTURE_2D, waterbgTexture[i] );
+		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST );
+		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST );
+		unsigned char *waterbgData = buildAlphaData ( waterbgImage[i] );
+		glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+						GL_RGBA, GL_UNSIGNED_BYTE, waterbgData );
+		free ( waterbgData );
+		}
+	} //end constructor
+	//--------------------------------------------------------------------
+	void render ( void );
+	float getXpos()
+	{
+		return current.x_pos;
+	}
+	float getYpos()
+	{
+		return current.y_pos;
+	}
+	float getXvel()
+	{
+		return current.x_vel;
+	}
+	float getYvel()
+	{
+		return current.y_vel;
+	}
+	void move ( float xp, float yp, float xv, float yv )
+	{
+		current = update_position ( &current,xp,yp,xv,yv );
+	}
+};
+// ==============================================================
 class Water
 {
 private:
@@ -648,7 +949,7 @@ public:
 		current.x_vel = 0;
 		current.y_vel = -1;
 		previous = current;
-		waterImage[0] = get_image ( "./images/water" );
+		waterImage[0] = get_image ( "./images/water1" );
 		waterImage[1] = get_image ( "./images/water1" );
 		for ( int i=0; i<2; i++ ) {
 			//create opengl texture elements
@@ -657,12 +958,12 @@ public:
 			int h = waterImage[i]->height;
 			glBindTexture ( GL_TEXTURE_2D, waterTexture[i] );
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,
-			                  GL_NEAREST );
+							GL_NEAREST );
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
-			                  GL_NEAREST );
+							GL_NEAREST );
 			unsigned char *waterData = buildAlphaData ( waterImage[i] );
 			glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-			               GL_RGBA, GL_UNSIGNED_BYTE, waterData );
+							GL_RGBA, GL_UNSIGNED_BYTE, waterData );
 			free ( waterData );
 		}
 	} //end constructor
@@ -726,12 +1027,12 @@ public:
 			//
 			glBindTexture ( GL_TEXTURE_2D, splashTexture[i] );
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,
-			                  GL_NEAREST );
+							GL_NEAREST );
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
-			                  GL_NEAREST );
+							GL_NEAREST );
 			unsigned char *splashData = buildAlphaData ( splashImage[i] );
 			glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-			               GL_RGBA, GL_UNSIGNED_BYTE, splashData );
+							GL_RGBA, GL_UNSIGNED_BYTE, splashData );
 			free ( splashData );
 		}
 	} //end constructor
@@ -768,6 +1069,80 @@ public:
 	}
 }; //end splash class ======================================
 
+class Explosion
+{
+private:
+	Position current;
+	Position previous;
+	Ppmimage *explosionImage[7];
+	GLuint explosionTexture[7];
+
+public:
+	// Constructor with default values for data members
+	Explosion()
+	{
+		current.frame = 0;
+		current.x_pos = -300;
+		current.y_pos =-800;
+		current.x_vel = 0;
+		current.y_vel = 0;
+		previous = current;
+		explosionImage[0] = get_image ( "./images/explosion" );
+		explosionImage[1] = get_image ( "./images/explosion1" );
+		explosionImage[2] = get_image ( "./images/explosion2" );
+		explosionImage[3] = get_image ( "./images/explosion3" );
+		explosionImage[4] = get_image ( "./images/explosion4" );
+		explosionImage[4] = get_image ( "./images/explosion5" );
+		explosionImage[4] = get_image ( "./images/explosion6" );
+		for ( int i =0; i<5; i++ ) {
+			//create opengl texture elements
+			glGenTextures ( 1, &explosionTexture[i] );
+			int w = explosionImage[i]->width;
+			int h = explosionImage[i]->height;
+			//
+			glBindTexture ( GL_TEXTURE_2D, explosionTexture[i] );
+			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,
+							GL_NEAREST );
+			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
+							GL_NEAREST );
+			unsigned char *explosionData = buildAlphaData ( explosionImage[i] );
+			glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+							GL_RGBA, GL_UNSIGNED_BYTE, explosionData );
+			free ( explosionData );
+		}
+	} //end constructor
+	//--------------------------------------------------------------------
+	float getFrame()
+	{
+		return current.frame;
+	}
+	void setFrame ( float x )
+	{
+		current.frame=x;
+	}
+	void render ( void );
+	float getXpos()
+	{
+		return current.x_pos;
+	}
+	float getYpos()
+	{
+		return current.y_pos;
+	}
+	float getXvel()
+	{
+		return current.x_vel;
+	}
+	float getYvel()
+	{
+		return current.y_vel;
+	}
+	void move ( float xp, float yp, float xv, float yv )
+	{
+		current = update_position ( &current,xp,yp,xv,yv );
+		current.frame=0;
+	}
+}; //end explosion class ======================================
 
 // ===========================================================================
 class RocketPack
@@ -797,12 +1172,12 @@ public:
 		//
 		glBindTexture ( GL_TEXTURE_2D, rocketPackTexture[i] );
 		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,
-		                  GL_NEAREST );
+						GL_NEAREST );
 		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
-		                  GL_NEAREST );
+						GL_NEAREST );
 		unsigned char *rocketPackData = buildAlphaData ( rocketPackImage[i] );
 		glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-		               GL_RGBA, GL_UNSIGNED_BYTE, rocketPackData );
+						GL_RGBA, GL_UNSIGNED_BYTE, rocketPackData );
 		free ( rocketPackData );
 	} //end constructor
 	//--------------------------------------------------------------------
@@ -864,12 +1239,12 @@ public:
 		//
 		glBindTexture ( GL_TEXTURE_2D, meterTexture[i] );
 		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,
-		                  GL_NEAREST );
+						GL_NEAREST );
 		glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
-		                  GL_NEAREST );
+						GL_NEAREST );
 		unsigned char *meterData = buildAlphaData ( meterImage[i] );
 		glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-		               GL_RGBA, GL_UNSIGNED_BYTE, meterData );
+						GL_RGBA, GL_UNSIGNED_BYTE, meterData );
 		free ( meterData );
 	} //end constructor
 	//--------------------------------------------------------------------
@@ -910,8 +1285,10 @@ class Turtle
 private:
 	Position current;
 	Position previous;
-	Ppmimage *turtleImage[6];
-	GLuint turtleTexture[6];
+	Ppmimage *turtleImage[12];
+	GLuint turtleTexture[12];
+	bool golden;
+	int goldenFrames;
 public:
 	// Constructor with default values for data members
 	Turtle()
@@ -923,13 +1300,21 @@ public:
 		current.x_vel = 2;
 		current.y_vel = 0.1;
 		previous = current;
+		golden = false;
+		goldenFrames =0;
 		turtleImage[0] = get_image ( "./images/turtle" );
 		turtleImage[1] = get_image ( "./images/turtle1" );
 		turtleImage[2] = get_image ( "./images/turtle2" );
 		turtleImage[3] = get_image ( "./images/turtle3" );
 		turtleImage[4] = get_image ( "./images/turtle4" );
 		turtleImage[5] = get_image ( "./images/turtle5" );
-		for ( int i=0; i<6; i++ ) {
+		turtleImage[6] = get_image ( "./images/turtleG" );
+		turtleImage[7] = get_image ( "./images/turtleG1" );
+		turtleImage[8] = get_image ( "./images/turtleG2" );
+		turtleImage[9] = get_image ( "./images/turtleG3" );
+		turtleImage[10] = get_image ( "./images/turtleG4" );
+		turtleImage[11] = get_image ( "./images/turtleG5" );
+		for ( int i=0; i<12; i++ ) {
 			//create opengl texture elements
 			glGenTextures ( 1, &turtleTexture[i] );
 			int w = turtleImage[i]->width;
@@ -937,12 +1322,12 @@ public:
 			//
 			glBindTexture ( GL_TEXTURE_2D, turtleTexture[i] );
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,
-			                  GL_NEAREST );
+							GL_NEAREST );
 			glTexParameteri ( GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,
-			                  GL_NEAREST );
+							GL_NEAREST );
 			unsigned char *turtleData = buildAlphaData ( turtleImage[i] );
 			glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-			               GL_RGBA, GL_UNSIGNED_BYTE, turtleData );
+							GL_RGBA, GL_UNSIGNED_BYTE, turtleData );
 			free ( turtleData );
 		}
 	} //end constructor
@@ -967,6 +1352,15 @@ public:
 	void move ( float xp, float yp, float xv, float yv )
 	{
 		current = update_position ( &current,xp,yp,xv,yv );
+	}
+	bool isGolden()
+	{
+		return golden;
+	}
+	void notGolden()
+	{
+		goldenFrames = 0;
+		golden = false;
 	}
 }; //end turtle class
 

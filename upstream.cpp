@@ -1,10 +1,3 @@
-/*     __  __           __
- *    / / / /___  _____/ /_________  ____ _____ ___
- *   / / / / __ \/ ___/ __/ ___/ _ \/ __ `/ __ `__ \
- *  / /_/ / /_/ (__  ) /_/ /  /  __/ /_/ / / / / / /
- *  \____/ .___/____/\__/_/   \___/\__,_/_/ /_/ /_/
- *      /_/
- */
 ///////////////////////////////////////////////////////////////////////
 // CONTRIBUTORS: JONATHAN DINH
 //               QUY NGUYEN
@@ -12,7 +5,12 @@
 //               KEVIN JENKIN
 ///////////////////////////////////////////////////////////////////////
 #include "upstream.h"
+#include "assert.h"
+#include <time.h>
+#include <iostream>
+using namespace std;
 
+int frames = 0;
 int main ( void )
 {
 	srand ( time ( NULL ) );
@@ -30,8 +28,15 @@ int main ( void )
 	initBuffer("./wav/tick.wav");
 	initBuffer("./wav/fishsplash.wav");
 	initBuffer("./wav/rocket.wav");
+	initBuffer("./wav/money.wav");
+	initBuffer("./wav/explosion.wav");
+	initBuffer("./wav/haha.wav");
+	initBuffer("./wav/wow.wav");
+	initBuffer("./wav/introSound.wav");
+	initBuffer("./wav/gamoverSound.wav");
 	playSounds ( "./wav/background.wav", 0.1f, true, game.muted );
-
+	playSounds ( "./wav/introSound.wav", 0.1f, true, game.intromuted );
+	clock_gettime(CLOCK_REALTIME, &timeStart);
 	while ( !game.done ) {
 		while ( XPending ( dpy ) ) {
 			XEvent e;
@@ -48,10 +53,13 @@ int main ( void )
 				checkResize ( &e, &game );
 				check_menu_mouse ( &e, &game );
 			}
+			playSounds ( "./wav/background.wav", 0.1f, false, game.muted );
+			game.demo.on=true;
 			demo ( &game );
 			physics ( &game );
 			render_main_menu ( &game );
 			glXSwapBuffers ( dpy, win );
+			game.demo.on =false;
 		}
 		//In game - Paused Menu
 		while ( !game.sub_menu ) {
@@ -65,7 +73,20 @@ int main ( void )
 			render_sub_menu ( &game );
 			glXSwapBuffers ( dpy, win );
 		}
+		//In game - Help Menu
+		while ( game.help_menu ) {
+			while ( XPending ( dpy ) ) {
+				XEvent e;
+				XNextEvent ( dpy, &e );
+				checkResize ( &e, &game );
+				check_help_mouse ( &e, &game );
+				check_keys ( &e, &game );
+			}
+			render_help_menu ( &game );
+			glXSwapBuffers ( dpy, win );
+		}
 		while (game.isHighScore) {
+			render(&game);
 			while ( XPending ( dpy ) ) {
 				XEvent e;
 				XNextEvent ( dpy, &e );
@@ -84,6 +105,7 @@ int main ( void )
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		}
 		while (game.gameover) {
+			render(&game);
 			while ( XPending ( dpy ) ) {
 				XEvent e;
 				XNextEvent ( dpy, &e );
@@ -99,21 +121,19 @@ int main ( void )
 		physics ( &game );
 		render ( &game );
 		glXSwapBuffers ( dpy, win );
+		clock_gettime(CLOCK_REALTIME, &timeCurrent);
+		timeSpan = timeDiff(&timeStart, &timeCurrent);
+		//cout << timeSpan << endl;
+		frames++;
+		if (timeSpan >= 1.0) {
+			game.fps = frames;
+			frames = 0;
+			timeCopy(&timeStart, &timeCurrent);
+		}
 	}
-	cleanUpSound();
+	//cleanUpSound();
 	cleanupXWindows();
 	return 0;
-}
-
-double timeDiff ( struct timespec *start, struct timespec *end )
-{
-	return ( double ) ( end->tv_sec - start->tv_sec ) +
-		( double ) ( end->tv_nsec - start->tv_nsec ) * oobillion;
-}
-
-void timeCopy ( struct timespec *dest, struct timespec *source )
-{
-	memcpy ( dest, source, sizeof ( struct timespec ) );
 }
 
 void set_title ( void )
@@ -170,7 +190,7 @@ void reshapeWindow ( int width, int height, Game *game )
 {
 	//window has been resized.
 	//setupScreenRes(width, height, game);
-	glViewport ( 0, 0, ( GLint ) width, ( GLint ) height );
+	glViewport ( 0, 0, (GLint)width, (GLint)height );
 	glMatrixMode ( GL_PROJECTION );
 	glLoadIdentity();
 	glMatrixMode ( GL_MODELVIEW );
@@ -224,10 +244,10 @@ void physics ( Game *game )
 		game->c.newPosX =game->frog->getXpos();
 		game->c.newPosY =game->frog->getYpos();
 	}
-	std::cout<<"main menu=" << game->main_menu<<std::endl;
+	//std::cout<<"main menu=" << game->main_menu<<std::endl;
 	if ( game->main_menu ) {
-        game->frog->meterOn();
-			}
+		game->frog->meterOn();
+	}
 
 	//move frog
 	if ( game->playing==true && game->splash->getFrame() >=400 ) {
@@ -254,29 +274,36 @@ void physics ( Game *game )
 		y=6-y;
 		game->fly->move ( game->fly->getXpos()+x/2,
 				game->fly->getYpos()+y,x/10,y/10 );
+
+		// move swarm
+		if (game->swarmOn) {
+
+			for ( int i=0; i < game->swarmSize; i++ ) {
+				int x=rand() %10+1;
+				int y =rand() %10+1;
+				float xdif = game->frog->getXpos() - game->swarm[i]->getXpos();
+				float ydif = game->frog->getYpos() - game->swarm[i]->getYpos();
+				x=6-x;
+				y=6-y;
+				x=x+xdif/100;
+				y=y+ydif/100;
+				game->swarm[i]->move ( game->swarm[i]->getXpos()+x/2,
+						game->swarm[i]->getYpos()+y,x/10,y/10 );
+			}
+		}
+		// =============================
 		checkLilies ( game );
 	}
-}
-
-void drawCircle ( float x, float y, float radius, int detail )
-{
-	float radian = 2.0 * 3.14;
-	glPushMatrix();
-	glColor3ub ( 90,140,90 );
-	glBegin ( GL_TRIANGLE_FAN );
-	for ( int i = 0; i <= detail; i++ ) {
-		glVertex2f (
-				x + ( radius * cos ( i * radian / detail ) ),
-				y + ( radius * sin ( i * radian / detail ) )
-				);
+	if ( game->score > 2000) {
+		game->bossGO =true;
 	}
-	glEnd();
-	glPopMatrix();
+	updateBullet(game);
 }
 
 void render ( Game *game )
 {
 	glClear ( GL_COLOR_BUFFER_BIT );
+	game->waterbg->render();
 	game->water[0]->render();
 	game->water[1]->render();
 	game->water[2]->render();
@@ -287,12 +314,31 @@ void render ( Game *game )
 	for ( int i=0; i<4; i++ ) {
 		game->log[i]->render();
 	}
-	//drawBubble(game);
+	if (game->gameover || game->isHighScore) {
+		game->x--;
+		if (game->x <=0)
+			game->x = game->windowWidth;
+		int y = 150;
+		y=y+(rand()%10-5);
+		game->fly->move ( game->x,y,game->x/10,y/10 );
+		drawBubble(game);
+	}
+
+	render_ingame_buttons(game);
 	game->splash->render();
+	game->explosion->render();
 	game->gator->render();
 	game->bridge->render();
 	game->frog->render();
-	game->fly->render();
+	if (game->bossGO) {
+		game->monster->render();
+		drawBullet(game);
+	}
+	game->fly->render(20);
+	if (game->swarmOn) {
+		for ( int i=0;i<game->swarmSize;i++)
+			game->swarm[i]->render(10);
+	}
 	game->hud->render();
 	game->rocketPack->render();
 	game->meter->render();
@@ -309,18 +355,26 @@ void render ( Game *game )
 	Rect r;
 	r.bot = game->windowHeight - 120;
 	r.left = 420;
-	//r.center = 600;
+	r.center = 600;
+	ggprint17 ( &r,100,0,"%d    %d",
+			game->lives,game->frog->getNumberRockets() );
 	//ggfrog40b ( &r, 50, 0, "UPSTREAM!" );
 	//ggprint40 ( &r,50,0,"Current Score: %d Mode: %s",game->score,mode.c_str());
-	ggprint17 ( &r,100,0,"%d    %d",game->lives,game->frog->getNumberRockets() );
 	//std::cout<<" Score: "<<game->score<<" Mode: "<<mode<<std::endl;
 	// std::cout<<"  "<<game->frog->numberRockets<<" "<<mode<<std::endl;
+	if (game->stresstest) {
+		displayNlily(game->nlily);
+		displayFPS(game->fps, game);
+	} else if (game->showfps) {
+		displayFPS(game->fps, game);
+	}
+
 	maxScore ( game );
-	r.left = 300;
-	if ( game->frog->getYpos() <=50 )
-		ggprint40 ( &r, 50, 0, "High Score: %d", game->highscore[0] );
+	//r.left = 300;
+	//if ( game->frog->getYpos() <=50 )
+	//	ggprint40 ( &r, 50, 0, "High Score: %d", game->highscore[0] );
 	//std::cout<<game->highscore[0]<<std::endl;
-	//ggprint40(&r, 0, 0, "FROG Y: %f", game->windowHeight - game->c.newPosY);
-	//ggprint40(&r, 0, 0, "FROG x: %f", game->c.newPosX);
+	//ggprint40(&r, 50, 0, "FROG Y: %f", game->windowHeight - game->c.newPosY);
+	//ggprint40(&r, 50, 0, "FROG x: %f", game->c.newPosX);
 	// ==========================================================
 }
