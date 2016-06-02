@@ -1,18 +1,20 @@
 // Author: Quy Nguyen
 // Date written:  04-26-16
-// Last modified: 05-30-16
+// Last modified: 06-01-16
 // Program: Game Menus and Prompts
 //          Game Introduction
-//          Game Attract Mode
+//          Game Texture for Buttons
 //
-// Purpose: I will be in charge of the game menu, introduction,
-//          attract mode (hard, medium, easy). I will attempt to
-//          make a generic function for each.
+// Purpose: I will be in charge of the game menus, game introduction,
+//          attract mode (hard, medium, easy), and buttons functality.
 //
-// 1st goal (week 6): Game Menu and Prompts (checked)
-// 2nd goal (week 7): Game Introduction (checked)
-// 3rd goal (week 8): Game Load button textures (checked)
-// 4th goal (week 9): Fix bugs; edit io.cpp; added introduction sound
+// 1st goal (week 6): Game menu and prompts (checked)
+// 2nd goal (week 7): Game introduction (checked)
+// 3rd goal (week 8): Game button textures (checked)
+// 4th goal (week 9): Other tasks:
+//                    Fix bugs; mouse check functionality;
+//                    added intro sound and gameover sound;
+//                    upstream.cpp rendering;
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
@@ -34,9 +36,9 @@
 #include "quyN.h"
 #include "kevinJ.h"
 
+//reset the game, setting default values
 void reset_game(Game *game)
 {
-	//reset the game
 	game->stresstest=0;
 	game->x = game->windowWidth/2;
 	game->troll_lilypad=0;
@@ -67,6 +69,10 @@ void reset_game(Game *game)
 	game->frog->move(WIDTH/2,40,0,0);
 }
 
+//game introduction render this function
+//display background
+//display two frog objects
+//render the main_menu buttons
 void render_main_menu(Game *game)
 {
 	glClear ( GL_COLOR_BUFFER_BIT );
@@ -74,24 +80,32 @@ void render_main_menu(Game *game)
 	game->frog->render();
 	game->frog2->render();
 	render_main_menu_buttons(game);
+	//check to show only one will be display
+	//while the other is turned off
 	if (game->highscoreboard)
 		render_highscore(game);
 	if (game->credits)
 		render_credits(game);
 }
 
+//sub-menu is the paused buttons in game
 void render_sub_menu(Game *game)
 {
 	game->pausedbg->render();
 	render_sub_menu_buttons(game);
 }
 
+//game over buttons will render when
+//gameover is true
 void render_gameover_menu(Game *game)
 {
 	game->gameoverbg->render();
 	render_gameover_menu_buttons(game);
 }
 
+//this function render the highscore leaderbord
+//similar to the one on the website when the 
+//score button is pressed
 void render_highscore(Game *game)
 {
 	Rect r;
@@ -114,6 +128,8 @@ void render_highscore(Game *game)
 	}
 }
 
+//this renders the credits displaying
+//members name who contributed to this project
 void render_credits(Game *game)
 {
 	Rect r;
@@ -132,6 +148,7 @@ void render_credits(Game *game)
 	ggprint13 ( &r, 40, 1, "KEVIN JENKIN");
 }
 
+//scaling, translating, and binding the introduction background texture
 void IntroBG::render(void)
 {
 	float wid = 300.0f;
@@ -161,6 +178,7 @@ void IntroBG::render(void)
 	glEnable ( GL_TEXTURE_2D );
 }
 
+//scaling, translating, and binding the paused menu texture
 void PausedBG::render(void)
 {
 	float wid = 250.0f;
@@ -190,6 +208,7 @@ void PausedBG::render(void)
 	glEnable ( GL_TEXTURE_2D );
 }
 
+//scaling, translating, and binding the game over menu texture
 void GameoverBG::render(void)
 {
 	float wid = 250.0f;
@@ -219,6 +238,7 @@ void GameoverBG::render(void)
 	glEnable ( GL_TEXTURE_2D );
 }
 
+//scaling, translating, and binding the highscore menu texture
 void highscoreBG::render(void)
 {
 	float wid = 220.0f;
@@ -248,11 +268,10 @@ void highscoreBG::render(void)
 	glEnable ( GL_TEXTURE_2D );
 }
 
+//initilize all in-game buttons
 void init_buttons(Game *game)
 {
-	//initialize all in-game buttons
 	game->nbuttons=0;
-	/************MAIN-MENU BOTTONS******************/
 	int n = 0;
 	//Main menu bottons
 	for (int i=0; i<5; i++) {
@@ -340,10 +359,13 @@ void init_buttons(Game *game)
 		game->nbuttons++;
 		n+=50;
 	}
+	//text for sound and help button
+	//instead of using texture like the other buttons
 	strcpy(game->button[13].text, "S");
 	strcpy(game->button[14].text, "Help");
 }
 
+//rendering the first five main menu buttons
 void render_main_menu_buttons(Game *game)
 {
 	for (int i=0; i<5; i++) {
@@ -399,6 +421,9 @@ void render_main_menu_buttons(Game *game)
 		glEnable(GL_TEXTURE_2D);
 	}
 
+	//difficulty buttons dynamically binds appropriate texture
+	//when difficulty button is pressed
+	//default is medium but changes to easy or hard
 	if (game->difficulty == 3) {
 		glBindTexture(GL_TEXTURE_2D, game->buttonT->buttonTexture[15]);
 		glPushMatrix();
@@ -468,6 +493,8 @@ void render_main_menu_buttons(Game *game)
 	}
 }
 
+//rendering five sub-menu buttons
+//buttons 6 to 10
 void render_sub_menu_buttons(Game *game)
 {
 	for (int i=5; i<10; i++) {
@@ -523,6 +550,8 @@ void render_sub_menu_buttons(Game *game)
 		glEnable(GL_TEXTURE_2D);
 	}
 
+	//sound on or off(mute)
+	//texture binds to one or the other when sound button is pressed
 	if (game->muted) {
 		glBindTexture(GL_TEXTURE_2D, game->buttonT->buttonTexture[13]);
 		glPushMatrix();
@@ -570,6 +599,8 @@ void render_sub_menu_buttons(Game *game)
 	}
 }
 
+//rendering game over menu buttons
+//three buttons: play, main menu, exit
 void render_gameover_menu_buttons(Game *game)
 {
 	for (int i=10; i<13; i++) {
@@ -610,10 +641,11 @@ void render_gameover_menu_buttons(Game *game)
 	}
 }
 
+//render two in-game buttons
+//sound and help button (top left corner location)
 void render_ingame_buttons(Game *game)
 {
 	Rect r;
-	//draw in-game sound and help buttons
 	glBindTexture(GL_TEXTURE_2D, 0);
 	for (int i=13; i<15; i++) {
 		if (game->button[i].over) {
@@ -643,14 +675,13 @@ void render_ingame_buttons(Game *game)
 	}
 }
 
+//mouse position checking when in main menu render
 void check_menu_mouse ( XEvent *e, Game *game )
 {
 	static int savex = 0;
 	static int savey = 0;
 	int i,x,y;
 	int lbutton=0;
-	//int rbutton=0;
-	//
 	if (e->type == ButtonRelease)
 		return;
 	if (e->type == ButtonPress) {
@@ -664,9 +695,6 @@ void check_menu_mouse ( XEvent *e, Game *game )
 			lbutton=1;
 		}
 		if (e->xbutton.button==3) {
-			//Right button is down
-			//rbutton=1;
-			//if (rbutton){}
 		}
 	}
 	x = e->xbutton.x;
@@ -687,6 +715,9 @@ void check_menu_mouse ( XEvent *e, Game *game )
 			if (game->button[i].over) {
 				if (lbutton) {
 					switch (i) {
+						//checking the actions when the mouse hovers over the
+						//rendered buttons and left clicked
+						//mouse over and buttons functionally check cases
 						case 0:
 							//Play
 							reset_game(game);
@@ -754,6 +785,7 @@ void check_menu_mouse ( XEvent *e, Game *game )
 	return;
 }
 
+//mouse position checking when in the sub-menu (paused) render
 void check_paused_mouse ( XEvent *e, Game *game )
 {
 	static int savex = 0;
@@ -761,7 +793,6 @@ void check_paused_mouse ( XEvent *e, Game *game )
 	int i,x,y;
 	int lbutton=0;
 	int rbutton=0;
-	//
 	if (e->type == ButtonRelease)
 		return;
 	if (e->type == ButtonPress) {
@@ -838,6 +869,7 @@ void check_paused_mouse ( XEvent *e, Game *game )
 	return;
 }
 
+//mouse position checking when in the game over menu render
 void check_gameover_mouse ( XEvent *e, Game *game )
 {
 	static int savex = 0;
@@ -845,9 +877,7 @@ void check_gameover_mouse ( XEvent *e, Game *game )
 	int i,x,y;
 	int lbutton=0;
 	int rbutton=0;
-	//
 	if (e->type == ButtonRelease)
-
 		return;
 	if (e->type == ButtonPress) {
 		if (e->xbutton.button==1) {
