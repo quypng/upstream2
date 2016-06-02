@@ -691,9 +691,9 @@ void check_menu_mouse ( XEvent *e, Game *game )
 							//Play
 							reset_game(game);
 							if ( game->c.isJumping ) {
-							  game->c.isJumping = false;
-							  game->c.isStanding = true;
-							  game->c.velocity[1] = 0.0;
+								game->c.isJumping = false;
+								game->c.isStanding = true;
+								game->c.velocity[1] = 0.0;
 							}
 							game->c.isStanding = true;
 							playSounds ( "./wav/tick.wav",1.0f,
@@ -817,7 +817,7 @@ void check_paused_mouse ( XEvent *e, Game *game )
 							playSounds ( "./wav/tick.wav",1.0f,
 									false, game->muted );
 							if ( game->frog->rocket() )
-							    game->frog->resetRocket();
+								game->frog->resetRocket();
 							game->sub_menu^=true;
 							game->main_menu^=true;
 							reset_game(game);
