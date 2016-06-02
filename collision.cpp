@@ -137,18 +137,23 @@ void collision ( Game *game )
 		if ( game->swarmOn ) {
 			for ( int i=0; i < game->swarmSize; i++ ) {
 				int tongue=30/game->difficulty;
-				if ( game->frog->getXpos() >= game->swarm[i]->getXpos()- tongue &&
-						game->frog->getXpos() <= game->swarm[i]->getXpos()+ tongue &&
-						game->frog->getYpos() <= game->swarm[i]->getYpos()+ tongue &&
-						game->frog->getYpos() >= game->swarm[i]->getYpos()- tongue ) {
+				if ( game->frog->getXpos() >=
+						game->swarm[i]->getXpos()-tongue &&
+						game->frog->getXpos() <=
+						game->swarm[i]->getXpos()+ tongue &&
+						game->frog->getYpos() <=
+						game->swarm[i]->getYpos()+ tongue &&
+						game->frog->getYpos() >=
+						game->swarm[i]->getYpos()- tongue ) {
 					playSounds ( "./wav/tick.wav",1.0f, false, game->muted );
 					game->score+=1;
-					game->swarm[i]->death ( game->frog->getXpos(),game->frog->getYpos() );
+					game->swarm[i]->death(game->frog->getXpos(),
+							game->frog->getYpos());
 				}
 			}
 			//std::cout<<"dead fly"<<std::endl;
 		}
-		// pickup rocketPack =====================================================
+		// pickup rocketPack ==================================================
 		int reach=50/game->difficulty;
 		if ( game->frog->getXpos() >= game->rocketPack->getXpos()- reach &&
 				game->frog->getXpos() <= game->rocketPack->getXpos()+ reach &&
@@ -353,7 +358,3 @@ void gameOver ( Game *game )
 		game->hschecked = false;
 	}
 }
-
-
-
-
